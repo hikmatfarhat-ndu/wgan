@@ -84,7 +84,7 @@ class WGAN_GP():
 
         noise = random_sample(self.cfg.batch_size, self.cfg.z_dim, self.cfg.device)
         fake_images = self.generator(noise)
-
+        
         real_logits = self.discrim(real_images)
         fake_logits = self.discrim(fake_images)
 
@@ -113,7 +113,10 @@ class WGAN_GP():
             self.discriminator_step(data)
             if idx % self.cfg.d_iter_per_g == 0:
                 self.generator_step(data)
-
+        # print("D-loss: ", np.mean(self.metrics["D-loss"]))
+        # print("G-loss: ", np.mean(self.metrics["G-loss"]))
+        # print("GP: ", np.mean(self.metrics["GP"]))
+        return np.mean(self.metrics["D-loss"]),np.mean(self.metrics["G-loss"])
 
     def _compute_gp(self, real_data, fake_data):
         batch_size = real_data.size(0)
@@ -148,7 +151,7 @@ class WGAN_GP():
         grid = make_grid(fake_images, nrow=4, normalize=True)
         img=self.recover_image(grid)
         img.save(os.path.join(self.cfg.images_dir,f"sample_{epoch}.png"))
-        return grid
+        return img
     
     def recover_image(self,img):
         # PIL expects the image to be of shape (H,W,C)

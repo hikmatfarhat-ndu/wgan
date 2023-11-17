@@ -28,4 +28,6 @@ save_model_freq: 50
 weights_dir: chkpt
 # saved images directory
 images_dir: images
+comet_workspace: wgan
+comet_project: wgan-gp
 
