@@ -14,9 +14,7 @@ from torchvision.utils import make_grid
 class WGAN_GP():
     """
     WGAN_GP Wasserstein GANs with Gradient Penalty.
-    Gets rid of gradient clipping from WGAN and uses
-    gradient clipping instead to enforce 1-Lipschitz
-    continuity. Everything else is the same as WGAN.
+    See https://arxiv.org/abs/1704.00028
     """
 
     def __init__(self, cfg):
@@ -26,20 +24,18 @@ class WGAN_GP():
 # see https://arxiv.org/abs/1511.06434
         self.generator = Generator(
             z_dim=self.cfg.z_dim,
-            out_ch=self.cfg.img_ch,norm_type=self.cfg.g_norm_type
+            out_ch=self.cfg.img_ch,norm_type=self.cfg.g_norm_type,
+            final_activation=self.cfg.g_final_activation
         )
-        #self.discrim = Discriminator(self.cfg.img_ch,norm_layer=LayerNorm2d)
-        self.discrim = Discriminator(self.cfg.img_ch,norm_type=self.cfg.d_norm_type)
+        self.discrim = Discriminator(self.cfg.img_ch,norm_type=self.cfg.d_norm_type,
+                                     final_activation=self.cfg.d_final_activation)
         self.initialize()
         
         self.set_optimizers()
     def initialize(self):
         dir_list=os.listdir(self.cfg.weights_dir)
        
-        if not dir_list:
-            self.generator.apply(init_weight)
-            self.discrim.apply(init_weight)
-        else:
+        if self.cfg.resume and  dir_list:
             gen_files=[f for f in dir_list if f.startswith("gen")]
             dis_files=[f for f in dir_list if f.startswith("dis")]
             gen_files.sort()
@@ -48,6 +44,10 @@ class WGAN_GP():
             self.generator.load_state_dict(torch.load(self.cfg.weights_dir+"/"+gen_files[-1]))
             self.discrim.load_state_dict(torch.load(self.cfg.weights_dir+"/"+dis_files[-1]))
             print(f"loaded weights from {self.cfg.weights_dir}/{gen_files[-1]} and {self.cfg.weights_dir}/{dis_files[-1]}")
+            
+        else:
+            self.generator.apply(init_weight)
+            self.discrim.apply(init_weight)
     def set_optimizers(self):
         self.generator = self.generator.to(self.cfg.device)
         self.discrim = self.discrim.to(self.cfg.device)

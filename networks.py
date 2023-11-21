@@ -3,19 +3,39 @@ import torch.nn as nn
 
 # The networks are taken from 
 # https://arxiv.org/abs/1511.06434
-
+class TBlock(nn.Module):
+    def __init__(self, in_ch, out_ch, kernel_size,stride,pad,norm_type: str = "batch"):
+        super.__init__()
+        self.net = nn.Sequential(
+            nn.ConvTranspose2d(in_ch,out_ch,kernel_size,stride, pad,bias=False),
+            norm_layer(out_ch,norm_type),
+            nn.ReLU()
+        )
+    def forward(self,x):
+        return self.net(x)
+class CBlock(nn.Module):
+    def __init__(self, in_ch, out_ch, kernel_size,stride,pad,norm_type: str = "batch"):
+        super.__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(in_ch,out_ch,kernel_size,stride, pad, bias=False),
+            norm_layer(out_ch,norm_type),
+            nn.LeakyReLU(0.2)
+        )
+    def forward(self,x):
+        return self.net(x)   
+    
 class Generator(nn.Module):
     #Outputs 64x64 pixel images
 
     def __init__(
         self,
         z_dim=100,
-        out_ch=3,norm_type:str="batch"
+        out_ch=3,norm_type:str="batch",final_activation=None
     ):
         super().__init__()
         self.z_dim = z_dim
         self.out_ch = out_ch
-
+        self.final_activation=final_activation
 
         self.net = nn.Sequential(
             # * Layer 1: 1x1
@@ -41,14 +61,16 @@ class Generator(nn.Module):
 
     def forward(self, x):
         x = self.net(x)
-        return torch.tanh(x)
+        return x if self.final_activation is None else self.final_activation(x)
+        
+        #return torch.tanh(x)
       
 
 class Discriminator(nn.Module):
-    def __init__(self, in_ch=3,norm_type:str="batch"):
+    def __init__(self, in_ch=3,norm_type:str="batch",final_activation=None):
         super().__init__()
         self.in_ch = in_ch
-
+        self.final_activation=final_activation
         self.net = nn.Sequential(
             # * 64x64
             nn.Conv2d(self.in_ch, 64, 4, 2, 1, bias=False),
@@ -70,8 +92,10 @@ class Discriminator(nn.Module):
         )
 
     def forward(self, x):
-        x = self.net(x)
-        return x
+          x = self.net(x)
+          return x if self.final_activation is None else self.final_activation(x)
+        
+        #return x
 class norm_layer(nn.Module):
     def __init__(self, num_channels,norm_type: str = "batch"):
         super().__init__()

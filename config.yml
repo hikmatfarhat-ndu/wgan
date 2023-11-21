@@ -12,6 +12,7 @@ img_ch: 3
 w_gp: 10
 # number of iterations of the discriminator per generator iteration
 d_iter_per_g: 5
+g_final_activation: nn.tanh
 
 # learning rate for generator (g) and discriminator (d)
 lr:

@@ -4,4 +4,4 @@ images/
 chkpt/
 chkpt-mnist*/
 MNIST
-images-mnist
+images-mnist*
