@@ -18,8 +18,11 @@ lr:
 
 batch_size: 256
 #g_norm_type: BatchNorm2d
-g_norm_type: GroupNorm
-d_norm_type: GroupNorm 
+# comment out if you don't want to use any normalization
+g_norm_type: BatchNorm2d
+d_norm_type: GroupNorm
+g_final_activation: "tanh"
+#d_final_activation: "sigmoid"
 epochs: 500
 # save generated images every save_img_freq epochs
 save_image_freq: 50

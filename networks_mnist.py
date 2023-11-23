@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class TBlock(nn.Module):
-    def __init__(self, in_ch, out_ch, kernel_size,stride,pad,norm_type: str = "batch"):
+    def __init__(self, in_ch, out_ch, kernel_size,stride,pad,norm_type= None):
         super().__init__()
         self.net = nn.Sequential(
             nn.ConvTranspose2d(in_ch,out_ch,kernel_size,stride, pad,bias=False),
@@ -12,7 +12,7 @@ class TBlock(nn.Module):
     def forward(self,x):
         return self.net(x)
 class CBlock(nn.Module):
-    def __init__(self, in_ch, out_ch, kernel_size,stride,pad,norm_type: str = "batch"):
+    def __init__(self, in_ch, out_ch, kernel_size,stride,pad,norm_type=None):
         super().__init__()
         self.net = nn.Sequential(
             nn.Conv2d(in_ch,out_ch,kernel_size,stride, pad, bias=False),
@@ -28,13 +28,13 @@ class Generator(nn.Module):
     def __init__(
         self,
         z_dim=100,
-        out_ch=3,norm_type:str="batch",
+        out_ch=3,norm_type=None,
         final_activation=None
     ):
         super().__init__()
         self.z_dim = z_dim
         self.out_ch = out_ch
-        self.final_activation=final_activation
+        self.final_activation=None if final_activation is None else getattr(torch,final_activation)
 
         self.net = nn.Sequential(
             # * Layer 1: 1x1
@@ -58,7 +58,7 @@ class Discriminator(nn.Module):
     def __init__(self, in_ch=3,norm_type:str="batch",final_activation=None):
         super().__init__()
         self.in_ch = in_ch
-        self.final_activation=final_activation
+        self.final_activation=None if final_activation is None else getattr(torch,final_activation)
         self.net = nn.Sequential(
             # * 28x28
             CBlock(self.in_ch,32,4,2,1,norm_type),
@@ -82,7 +82,7 @@ class norm_layer(nn.Module):
             self.norm = nn.BatchNorm2d(num_channels)
         elif norm_type == "GroupNorm":
             self.norm = nn.GroupNorm(num_channels, num_channels)
-        elif norm_type is None:
+        elif norm_type is None or norm_type == "None":
             self.norm=None
         else:
             raise ValueError(f"Unknown normalization type: {norm_type}")

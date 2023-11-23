@@ -12,7 +12,6 @@ img_ch: 3
 w_gp: 10
 # number of iterations of the discriminator per generator iteration
 d_iter_per_g: 5
-g_final_activation: nn.tanh
 
 # learning rate for generator (g) and discriminator (d)
 lr:
@@ -20,6 +19,12 @@ lr:
   d: 1.0e-4
 
 batch_size: 256
+g_norm_type: GroupNorm
+d_norm_type: GroupNorm
+g_final_activation: "tanh"
+
+
+
 epochs: 200
 # save generated images every save_img_freq epochs
 save_image_freq: 20
@@ -31,4 +36,5 @@ weights_dir: chkpt
 images_dir: images
 comet_workspace: wgan
 comet_project: wgan-gp
+resume: True
 

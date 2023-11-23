@@ -5,7 +5,7 @@ import torch.nn as nn
 # https://arxiv.org/abs/1511.06434
 class TBlock(nn.Module):
     def __init__(self, in_ch, out_ch, kernel_size,stride,pad,norm_type: str = "batch"):
-        super.__init__()
+        super().__init__()
         self.net = nn.Sequential(
             nn.ConvTranspose2d(in_ch,out_ch,kernel_size,stride, pad,bias=False),
             norm_layer(out_ch,norm_type),
@@ -15,7 +15,7 @@ class TBlock(nn.Module):
         return self.net(x)
 class CBlock(nn.Module):
     def __init__(self, in_ch, out_ch, kernel_size,stride,pad,norm_type: str = "batch"):
-        super.__init__()
+        super().__init__()
         self.net = nn.Sequential(
             nn.Conv2d(in_ch,out_ch,kernel_size,stride, pad, bias=False),
             norm_layer(out_ch,norm_type),
@@ -35,25 +35,29 @@ class Generator(nn.Module):
         super().__init__()
         self.z_dim = z_dim
         self.out_ch = out_ch
-        self.final_activation=final_activation
+        self.final_activation=None if final_activation is None else getattr(torch,final_activation)
 
         self.net = nn.Sequential(
             # * Layer 1: 1x1
-            nn.ConvTranspose2d(self.z_dim, 512, 4, 1, 0, bias=False),
-            norm_layer(512,norm_type),
-            nn.ReLU(),
+            # nn.ConvTranspose2d(self.z_dim, 512, 4, 1, 0, bias=False),
+            # norm_layer(512,norm_type),
+            # nn.ReLU(),
+            TBlock(self.z_dim,512, 4,1, 0,norm_type),
             # * Layer 2: 4x4
-            nn.ConvTranspose2d(512, 256, 4, 2, 1, bias=False),
-            norm_layer(256,norm_type),
-            nn.ReLU(),
+            # nn.ConvTranspose2d(512, 256, 4, 2, 1, bias=False),
+            # norm_layer(256,norm_type),
+            # nn.ReLU(),
+            TBlock(512,256,4,2,1,norm_type),
             # * Layer 3: 8x8
-            nn.ConvTranspose2d(256, 128, 4, 2, 1, bias=False),
-            norm_layer(128,norm_type),
-            nn.ReLU(),
+            # nn.ConvTranspose2d(256, 128, 4, 2, 1, bias=False),
+            # norm_layer(128,norm_type),
+            # nn.ReLU(),
+            TBlock(256,128,4,2,1,norm_type),
             # * Layer 4: 16x16
-            nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),
-            norm_layer(64,norm_type),
-            nn.ReLU(),
+            # nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),
+            # norm_layer(64,norm_type),
+            # nn.ReLU(),
+            TBlock(128,64,4,2,1,norm_type),
             # * Layer 5: 32x32
             nn.ConvTranspose2d(64, self.out_ch, 4, 2, 1, bias=False),
             # * Output: 64x64
@@ -70,23 +74,26 @@ class Discriminator(nn.Module):
     def __init__(self, in_ch=3,norm_type:str="batch",final_activation=None):
         super().__init__()
         self.in_ch = in_ch
-        self.final_activation=final_activation
+        self.final_activation=None if final_activation is None else getattr(torch,final_activation)
         self.net = nn.Sequential(
             # * 64x64
             nn.Conv2d(self.in_ch, 64, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2),
             # * 32x32
-            nn.Conv2d(64, 128, 4, 2, 1, bias=False),
-            norm_layer(128,norm_type),
-            nn.LeakyReLU(0.2),
+            # nn.Conv2d(64, 128, 4, 2, 1, bias=False),
+            # norm_layer(128,norm_type),
+            # nn.LeakyReLU(0.2),
+            CBlock(64,128,4,2,1,norm_type),
             # * 16x16
-            nn.Conv2d(128, 256, 4, 2, 1, bias=False),
-            norm_layer(256,norm_type),
-            nn.LeakyReLU(0.2),
+            # nn.Conv2d(128, 256, 4, 2, 1, bias=False),
+            # norm_layer(256,norm_type),
+            # nn.LeakyReLU(0.2),
+            CBlock(128,256,4,2,1,norm_type),
             # * 8x8
-            nn.Conv2d(256, 512, 4, 2, 1, bias=False),
-            norm_layer(512,norm_type),
-            nn.LeakyReLU(0.2),
+            # nn.Conv2d(256, 512, 4, 2, 1, bias=False),
+            # norm_layer(512,norm_type),
+            # nn.LeakyReLU(0.2),
+            CBlock(256,512,4,2,1,norm_type),
             # * 4x4
             nn.Conv2d(512, 1, 4, 1, 0, bias=False),
         )
@@ -97,14 +104,29 @@ class Discriminator(nn.Module):
         
         #return x
 class norm_layer(nn.Module):
-    def __init__(self, num_channels,norm_type: str = "batch"):
+    def __init__(self, num_channels,norm_type: str = None):
         super().__init__()
-        if norm_type == "batch":
+        if norm_type == "BatchNorm2d":
             self.norm = nn.BatchNorm2d(num_channels)
-        elif norm_type == "group":
+        elif norm_type == "GroupNorm":
             self.norm = nn.GroupNorm(num_channels, num_channels)
+        elif norm_type is None or norm_type == "None":
+            self.norm=None
         else:
             raise ValueError(f"Unknown normalization type: {norm_type}")
         
     def forward(self, x):
-        return self.norm(x)
+        return x if self.norm is None else self.norm(x)
+
+# class norm_layer(nn.Module):
+#     def __init__(self, num_channels,norm_type: str = "batch"):
+#         super().__init__()
+#         if norm_type == "batch":
+#             self.norm = nn.BatchNorm2d(num_channels)
+#         elif norm_type == "group":
+#             self.norm = nn.GroupNorm(num_channels, num_channels)
+#         else:
+#             raise ValueError(f"Unknown normalization type: {norm_type}")
+        
+#     def forward(self, x):
+#         return self.norm(x)
