@@ -47,9 +47,12 @@ class WGAN_GP():
             self.generator.load_state_dict(torch.load(self.cfg.weights_dir+"/"+gen_files[-1]))
             self.discrim.load_state_dict(torch.load(self.cfg.weights_dir+"/"+dis_files[-1]))
             print(f"loaded weights from {self.cfg.weights_dir}/{gen_files[-1]} and {self.cfg.weights_dir}/{dis_files[-1]}")
+            self.starting_epoch=int(gen_files[-1].split("_")[1].split(".")[0])
+            #self.starting_epoch=int(re.findall(r'\d+', gen_files[-1])[0])
         else:
             self.generator.apply(init_weight)
             self.discrim.apply(init_weight)
+            self.starting_epoch=0
             
     def set_optimizers(self):
         self.generator = self.generator.to(self.cfg.device)

@@ -97,6 +97,21 @@ class Discriminator(nn.Module):
             # * 4x4
             nn.Conv2d(512, 1, 4, 1, 0, bias=False),
         )
+        # self.net = nn.Sequential(
+        #     # * 128x128
+        #     nn.Conv2d(self.in_ch, 64, 4, 2, 1, bias=False),
+        #     nn.LeakyReLU(0.2),
+        #     # * 64x64
+        #     CBlock(64,128,4,2,1,norm_type),
+        #     * 32x32
+        #     CBlock(128,256,4,2,1,norm_type),
+        #     # * 16x16
+        #     CBlock(256,512,4,2,1,norm_type),
+        #     # * 8x8
+        #     CBlock(512,1024,4,2,1,norm_type),
+        #     # * 4x4
+        #     nn.Conv2d(1024, 1, 4, 1, 0, bias=False),
+        # )
 
     def forward(self, x):
           x = self.net(x)
@@ -117,16 +132,3 @@ class norm_layer(nn.Module):
         
     def forward(self, x):
         return x if self.norm is None else self.norm(x)
-
-# class norm_layer(nn.Module):
-#     def __init__(self, num_channels,norm_type: str = "batch"):
-#         super().__init__()
-#         if norm_type == "batch":
-#             self.norm = nn.BatchNorm2d(num_channels)
-#         elif norm_type == "group":
-#             self.norm = nn.GroupNorm(num_channels, num_channels)
-#         else:
-#             raise ValueError(f"Unknown normalization type: {norm_type}")
-        
-#     def forward(self, x):
-#         return self.norm(x)

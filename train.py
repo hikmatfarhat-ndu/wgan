@@ -44,8 +44,8 @@ dataloader = DataLoader(
     drop_last=True,
 )
 model=WGAN_GP(cfg)
-
-loop = trange(cfg.epochs, desc="Epoch: ", ncols=75)
+start_epoch=model.starting_epoch
+loop = trange(start_epoch,start_epoch+cfg.epochs, desc="Epoch: ", ncols=75)
 
 
 
@@ -61,8 +61,10 @@ for epoch in loop:
     metrics={'loss_d':loss_d,'loss_g':loss_g}
     experiment.log_metrics(metrics, epoch=epoch)
     if (epoch+1) % cfg.save_model_freq == 0:
+        print(f"Saving model at epoch {epoch}")
         model.save_model(epoch)
     if(epoch+1) % cfg.save_image_freq == 0:
         img=model.save_images(epoch,32)
         experiment.log_image(img)
+        print(f"Saving images at epoch {epoch}")
 
