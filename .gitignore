@@ -1,8 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 images/
-chkpt/
-chkpt-mnist*/
+chkpt*/
 MNIST
 images-mnist*
 samples

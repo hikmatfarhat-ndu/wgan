@@ -29,14 +29,14 @@ epochs: 500
 # save generated images every save_img_freq epochs
 save_image_freq: 50
 # save model every save_model_freq epochs
-save_model_freq: 100
+save_model_freq: 50
 # saved weights directory
 weights_dir: chkpt
 # directory where a sample grid of images will be saved
 images_dir: images
 comet_workspace: wgan
 comet_project: wgan-gp
-resume: True
+resume: False
 # directory where samples from generate_images.py will be saved
 samples_dir: samples
 
