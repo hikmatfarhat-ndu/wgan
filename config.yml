@@ -5,7 +5,7 @@ device: cuda
 
 data_dir: /home/user/PyTorch-Lightning-GAN/GAN/celeba 
 
-z_dim: 128
+zdim: 128
 imsize: 64
 img_ch: 3
 ## gradient penalty coefficient
@@ -19,9 +19,15 @@ lr:
   d: 1.0e-4
 
 batch_size: 256
-g_norm_type: GroupNorm
-d_norm_type: GroupNorm
-g_final_activation: "tanh"
+norm_type:
+  g: GroupNorm
+  d: GroupNorm
+#g_norm_type: GroupNorm
+#d_norm_type: GroupNorm
+#g_norm_type: BatchNorm2d
+#d_norm_type: BatchNorm2d
+final_activation: 
+  g: "tanh"
 
 
 
@@ -39,5 +45,7 @@ comet_project: wgan-gp
 resume: False
 # directory where samples from generate_images.py will be saved
 samples_dir: samples
+# number of epoch to run to generate samples
+num_sample_epochs: 20
 
 

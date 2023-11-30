@@ -4,6 +4,7 @@ from torchvision.datasets import ImageFolder
 from torch.utils.data.dataloader import DataLoader
 import torchvision.transforms as vt
 
+
 #import os
 import yaml
 from munch import DefaultMunch
@@ -63,6 +64,8 @@ for epoch in loop:
     if (epoch+1) % cfg.save_model_freq == 0:
         print(f"Saving model at epoch {epoch}")
         model.save_model(epoch)
+        #fid=model.compute_fid(dataloader=dataloader)
+        #experiment.log_metric("fid",fid,epoch=epoch)
     if(epoch+1) % cfg.save_image_freq == 0:
         img=model.save_images(epoch,32)
         experiment.log_image(img)

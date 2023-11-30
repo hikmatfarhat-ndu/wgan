@@ -3,6 +3,10 @@
 import torch
 import torch.nn as nn
 
+def norm(img):
+            low=float(img.min())
+            high=float(img.max())
+            img.sub_(low).div_(max(high - low, 1e-5))
 def random_sample(batch_size, z_dim, device):
         # input to the generator
         # z_dim channels, 1x1 pixels

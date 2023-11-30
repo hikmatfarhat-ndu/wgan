@@ -8,6 +8,18 @@ from PIL import Image
 import numpy as np
 from torchvision.utils import make_grid
 import torch.functional as F
+from torchvision.utils import make_grid
+import numpy as np
+from matplotlib import pyplot as plt
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+
+
+parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+parser.add_argument("--weights-path", type=str, help="weights path")
+args=parser.parse_args()
+
+
+
 cfg_path = "config.yml"
 with open(cfg_path, "r") as f:
     print(f"Loading config file: {cfg_path}")
@@ -19,7 +31,9 @@ generator=Generator(
             final_activation=cfg.g_final_activation
         )
 dir_list=os.listdir(cfg.weights_dir)
-if dir_list:
+
+if args.weights_path is None:
+    if dir_list:
             gen_files=[f for f in dir_list if f.startswith("gen")]
             dis_files=[f for f in dir_list if f.startswith("dis")]
             gen_files.sort()
@@ -28,16 +42,18 @@ if dir_list:
             generator.load_state_dict(torch.load(cfg.weights_dir+"/"+gen_files[-1]))
            
             print(f"loaded weights from {cfg.weights_dir}/{gen_files[-1]} and {cfg.weights_dir}/{dis_files[-1]}")
+    else:
+        exit("No weights found")
 else:
-    exit("No weights found")
+    generator.load_state_dict(torch.load(args.weights_path))
+    print(f"loaded weights from {args.weights_path}")
+
+def norm(img):
+            low=float(img.min())
+            high=float(img.max())
+            img.sub_(low).div_(max(high - low, 1e-5))
 
 def recover_image(tensor):
-        # PIL expects the image to be of shape (H,W,C)
-        # in PyTorch it's (C,H,W)
-        # min=tensor.min()
-        # max=tensor.max()
-        # tensor=tensor-min
-        # tensor=tensor/max
         tensor=tensor.cpu().numpy().transpose(1, 2,0)*255
         
         return Image.fromarray(tensor.astype(np.uint8))
@@ -45,14 +61,13 @@ def recover_image(tensor):
     
 generator.to(cfg.device)
 generator.eval()
-noise = random_sample(cfg.batch_size,cfg.z_dim,cfg.device)
 
-fake_images = generator(noise)
 with torch.no_grad():
-    fake_images = generator(noise)
+  for k in range(cfg.num_sample_epochs):
+    noise = random_sample(cfg.batch_size,cfg.z_dim,cfg.device)
+    fake_images = generator(noise)  
+    norm(fake_images)
     for i in range(fake_images.shape[0]):
-        img=make_grid(fake_images[i],nrow=1,normalize=True)
-        img=recover_image(img)
-        img.save(os.path.join(cfg.samples_dir,f"sample_{i}.png"))
+        img=recover_image(fake_images[i])
+        img.save(os.path.join(cfg.samples_dir,f"sample_{cfg.batch_size*k+i}.png"))
 
-#print(fake_images.shape)

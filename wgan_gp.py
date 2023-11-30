@@ -8,15 +8,13 @@ import os
 from PIL import Image
 import numpy as np
 from networks import Generator,Discriminator
-from utils import init_weight,random_sample
+from utils import init_weight,random_sample,norm
 from torchvision.utils import make_grid
+from torchmetrics.image.fid import FrechetInceptionDistance
 
 class WGAN_GP():
     """
-    WGAN_GP Wasserstein GANs with Gradient Penalty.
-    Gets rid of gradient clipping from WGAN and uses
-    gradient clipping instead to enforce 1-Lipschitz
-    continuity. Everything else is the same as WGAN.
+    WGAN_GP Wasserstein GAN. Uses gradient penalty instead of gradient clipping to enforce 1-Lipschitz continuity. 
     """
 
     def __init__(self, cfg):
@@ -24,16 +22,20 @@ class WGAN_GP():
         self.cfg = cfg
         self.d_iter_per_g = 1 if self.cfg.d_iter_per_g is None else self.cfg.d_iter_per_g
 # see https://arxiv.org/abs/1511.06434
-        self.generator = Generator(
-            z_dim=self.cfg.z_dim,
-            out_ch=self.cfg.img_ch,norm_type=self.cfg.g_norm_type,
-            final_activation=self.cfg.g_final_activation
-        )
-        self.discrim = Discriminator(self.cfg.img_ch,norm_type=self.cfg.d_norm_type,
-                                     final_activation=self.cfg.d_final_activation)
+        # self.generator = Generator(
+        #     z_dim=self.cfg.z_dim,
+        #     out_ch=self.cfg.img_ch,norm_type=self.cfg.g_norm_type,
+        #     final_activation=self.cfg.g_final_activation
+        # )
+       
+        self.generator=Generator(cfg.imsize,cfg.img_ch,cfg.zdim,
+                                 norm_type=cfg.norm_type.g,
+                                 final_activation=self.cfg.final_activation.g)
+        self.discrim = Discriminator(cfg.imsize,cfg.img_ch,norm_type=cfg.norm_type.d,
+                                     final_activation=cfg.final_activation.d)
         self.initialize()
-        
         self.set_optimizers()
+
     def initialize(self):
         dir_list=os.listdir(self.cfg.weights_dir)
     
@@ -62,33 +64,22 @@ class WGAN_GP():
         self.optD = Adam(self.discrim.parameters(), lr=self.cfg.lr.d)
 
     def generator_step(self, data):
-        self.generator.train()
-        self.discrim.eval()
 
+        noise = random_sample(self.cfg.batch_size, self.cfg.zdim, self.cfg.device)
+        fake_images = self.generator(noise)
+        fake_logits = self.discrim(fake_images)
+        g_loss = -fake_logits.mean().view(-1)
         self.optG.zero_grad()
 
-        noise = random_sample(self.cfg.batch_size, self.cfg.z_dim, self.cfg.device)
-
-        fake_images = self.generator(noise)
-
-        fake_logits = self.discrim(fake_images)
-
-        loss = -fake_logits.mean().view(-1)
-
-        loss.backward()
+        g_loss.backward()
         self.optG.step()
 
-        self.metrics["G-loss"] += [loss.item()]
+        self.metrics["G-loss"] += [g_loss.item()]
 
     def discriminator_step(self, data):
-        self.generator.eval()
-        self.discrim.train()
-
-        self.optD.zero_grad()
-
+        
         real_images = data[0].float().to(self.cfg.device)
-
-        noise = random_sample(self.cfg.batch_size, self.cfg.z_dim, self.cfg.device)
+        noise = random_sample(self.cfg.batch_size, self.cfg.zdim, self.cfg.device)
         fake_images = self.generator(noise)
         
         real_logits = self.discrim(real_images)
@@ -99,13 +90,13 @@ class WGAN_GP():
         )
 
         loss_c = fake_logits.mean() - real_logits.mean()
+        d_loss = loss_c + gradient_penalty
 
-        loss = loss_c + gradient_penalty
-
-        loss.backward()
+        self.optD.zero_grad()
+        d_loss.backward()
         self.optD.step()
 
-        self.metrics["D-loss"] += [loss.item()]
+        self.metrics["D-loss"] += [d_loss.item()]
         self.metrics["GP"] += [gradient_penalty.item()]
     def train_epoch(self, dataloader):
         # use of defaultdict instead of regular dict
@@ -119,9 +110,7 @@ class WGAN_GP():
             self.discriminator_step(data)
             if idx % self.cfg.d_iter_per_g == 0:
                 self.generator_step(data)
-        # print("D-loss: ", np.mean(self.metrics["D-loss"]))
-        # print("G-loss: ", np.mean(self.metrics["G-loss"]))
-        # print("GP: ", np.mean(self.metrics["GP"]))
+        
         return np.mean(self.metrics["D-loss"]),np.mean(self.metrics["G-loss"])
 
     def _compute_gp(self, real_data, fake_data):
@@ -130,11 +119,11 @@ class WGAN_GP():
         eps = eps.expand_as(real_data)
         interpolation = eps * real_data + (1 - eps) * fake_data
 
-        interp_logits = self.discrim(interpolation)
-        grad_outputs = torch.ones_like(interp_logits)
+        intp_logits = self.discrim(interpolation)
+        grad_outputs = torch.ones_like(intp_logits)
 
         gradients = autograd.grad(
-            outputs=interp_logits,
+            outputs=intp_logits,
             inputs=interpolation,
             grad_outputs=grad_outputs,
             create_graph=True,
@@ -148,9 +137,10 @@ class WGAN_GP():
     def generate_images(self, nsamples):
         self.generator.eval()
         with torch.no_grad():
-            noise = random_sample(self.cfg.batch_size, self.cfg.z_dim, self.cfg.device)[:nsamples]
+            noise = random_sample(self.cfg.batch_size, self.cfg.zdim, self.cfg.device)[:nsamples]
             fake_images = self.generator(noise)
         return fake_images
+    
     def save_images(self,epoch,nsamples=32):
     
         fake_images = self.generate_images(nsamples=nsamples)
@@ -165,6 +155,7 @@ class WGAN_GP():
 
         img=img.cpu().numpy().transpose(1, 2,0)*255
         return Image.fromarray(img.astype(np.uint8))
+    
     def save_model(self,epoch):
         # if the directory doesn't exist, create it
         try:
@@ -173,3 +164,23 @@ class WGAN_GP():
             pass
         torch.save(self.generator.state_dict(), os.path.join(self.cfg.weights_dir, f"generator_{epoch:03}.pth"))
         torch.save(self.discrim.state_dict(), os.path.join(self.cfg.weights_dir, f"discrim_{epoch:03}.pth"))
+
+    def compute_fid(self,dataloader):
+        #TODO: fix this because gpu running out of memory and cpu is too slow
+        fid=FrechetInceptionDistance(feature=2048,normalize=True)
+        fid.to(self.cfg.device)
+        idx=0
+        for data in tqdm(dataloader):
+            print(idx)
+            idx+=1
+            real_images=data[0].float().to(self.cfg.device)
+        #    real_images=data[0].float()
+            noise = random_sample(self.cfg.batch_size,self.cfg.zdim,self.cfg.device)
+           # g=self.generator.to('cpu')
+            fake_images = self.generator(noise)
+            norm(fake_images)
+            norm(real_images)
+            fid.update(fake_images,real=False)
+            fid.update(real_images,real=True)
+        return fid.compute()
+            
