@@ -1,3 +1,4 @@
+from comet_ml.integration.pytorch import log_model
 import torch
 import torch.nn as nn
 from torch.optim import Adam
@@ -7,11 +8,11 @@ from collections import defaultdict
 import os
 from PIL import Image
 import numpy as np
-from networks import Generator,Discriminator
+from dcgan import Generator,Discriminator
 from utils import init_weight,random_sample,norm
 from torchvision.utils import make_grid
 from torchmetrics.image.fid import FrechetInceptionDistance
-
+from lightning.fabric import Fabric
 class WGAN_GP():
     """
     WGAN_GP Wasserstein GAN. Uses gradient penalty instead of gradient clipping to enforce 1-Lipschitz continuity. 
@@ -33,10 +34,19 @@ class WGAN_GP():
                                  final_activation=self.cfg.final_activation.g)
         self.discrim = Discriminator(cfg.imsize,cfg.img_ch,norm_type=cfg.norm_type.d,
                                      final_activation=cfg.final_activation.d)
+        
+        
+        if cfg.use_fabric:
+            self.fabric=Fabric(accelerator="cuda",devices=1,precision="bf16-mixed")
+            self.fabric.launch()
+        self.config_optimizers()
         self.initialize()
-        self.set_optimizers()
-
+    
+    
     def initialize(self):
+        if self.cfg.use_fabric:
+            self.cfg.weights_dir=self.cfg.weights_dir+"-fabric"
+       
         dir_list=os.listdir(self.cfg.weights_dir)
     
             
@@ -56,13 +66,18 @@ class WGAN_GP():
             self.discrim.apply(init_weight)
             self.starting_epoch=0
             
-    def set_optimizers(self):
-        self.generator = self.generator.to(self.cfg.device)
-        self.discrim = self.discrim.to(self.cfg.device)
+    def config_optimizers(self):
+        
 
         self.optG = Adam(self.generator.parameters(), lr=self.cfg.lr.g)
         self.optD = Adam(self.discrim.parameters(), lr=self.cfg.lr.d)
-
+        if self.cfg.use_fabric:
+            self.generator,self.optG=self.fabric.setup(self.generator,self.optG)    
+            self.discrim,self.optD=self.fabric.setup(self.discrim,self.optD)
+        else:
+            self.generator = self.generator.to(self.cfg.device)
+            self.discrim = self.discrim.to(self.cfg.device)
+        return [self.optG,self.optD], []
     def generator_step(self, data):
 
         noise = random_sample(self.cfg.batch_size, self.cfg.zdim, self.cfg.device)
@@ -70,8 +85,10 @@ class WGAN_GP():
         fake_logits = self.discrim(fake_images)
         g_loss = -fake_logits.mean().view(-1)
         self.optG.zero_grad()
-
-        g_loss.backward()
+        if self.cfg.use_fabric:
+            self.fabric.backward(g_loss)
+        else:
+            g_loss.backward()
         self.optG.step()
 
         self.metrics["G-loss"] += [g_loss.item()]
@@ -93,7 +110,10 @@ class WGAN_GP():
         d_loss = loss_c + gradient_penalty
 
         self.optD.zero_grad()
-        d_loss.backward()
+        if self.cfg.use_fabric:
+            self.fabric.backward(d_loss)
+        else:
+            d_loss.backward()
         self.optD.step()
 
         self.metrics["D-loss"] += [d_loss.item()]
@@ -158,10 +178,11 @@ class WGAN_GP():
     
     def save_model(self,epoch):
         # if the directory doesn't exist, create it
-        try:
-            os.mkdir(self.cfg.weights_dir)
-        except:
-            pass
+        if not os.path.isdir(self.cfg.weights_dir):
+            try:
+                os.mkdir(self.cfg.weights_dir)
+            except:
+                raise ValueError(f"Weights dir{self.cfg.weights_dir} not found nor created")
         torch.save(self.generator.state_dict(), os.path.join(self.cfg.weights_dir, f"generator_{epoch:03}.pth"))
         torch.save(self.discrim.state_dict(), os.path.join(self.cfg.weights_dir, f"discrim_{epoch:03}.pth"))
 

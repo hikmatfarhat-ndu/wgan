@@ -22,30 +22,30 @@ batch_size: 256
 norm_type:
   g: GroupNorm
   d: GroupNorm
-#g_norm_type: GroupNorm
-#d_norm_type: GroupNorm
-#g_norm_type: BatchNorm2d
-#d_norm_type: BatchNorm2d
+
+  #g: BatchNorm2d
+  #d: BatchNorm2d
 final_activation: 
   g: "tanh"
-
-
-
+# if True use fabric to with bf16 precision. Typically 20% faster
+use_fabric: False
+# if True resume training from the latest checkpoint
+resume: False
 epochs: 500
 # save generated images every save_img_freq epochs
 save_image_freq: 50
 # save model every save_model_freq epochs
-save_model_freq: 50
+save_model_freq: 100
 # saved weights directory
 weights_dir: chkpt
 # directory where a sample grid of images will be saved
 images_dir: images
 comet_workspace: wgan
 comet_project: wgan-gp
-resume: False
 # directory where samples from generate_images.py will be saved
 samples_dir: samples
 # number of epoch to run to generate samples
+# used by generate_images.py
 num_sample_epochs: 20
 
 

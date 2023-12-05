@@ -12,7 +12,8 @@
 # fid score for two different sets of the "real images" is 5.5
 # batch size=256, batches=20
 
-
+# the values are for generator first layer producing 512 channels instead of 1024
+# as a comparison the torchmetrics value for epoch=500 and 1024 channels is 38 instead of 45
 #epochs	custom-FID	torchmetrics	torcheval
 50,      155,         147,            89
 100,     121,         99,             46
