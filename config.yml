@@ -19,6 +19,7 @@ lr:
   d: 1.0e-4
 
 batch_size: 256
+num_workers: 4
 norm_type:
   g: GroupNorm
   d: GroupNorm
