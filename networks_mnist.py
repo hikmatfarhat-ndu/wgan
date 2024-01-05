@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+# Transpose convolutional block
 class TBlock(nn.Module):
     def __init__(self, in_ch, out_ch, kernel_size,stride,pad,norm_type= None):
         super().__init__()
@@ -11,6 +11,7 @@ class TBlock(nn.Module):
         )
     def forward(self,x):
         return self.net(x)
+# Convolutional block
 class CBlock(nn.Module):
     def __init__(self, in_ch, out_ch, kernel_size,stride,pad,norm_type=None):
         super().__init__()
@@ -38,13 +39,17 @@ class Generator(nn.Module):
 
         self.net = nn.Sequential(
             # * Layer 1: 1x1
-            TBlock(self.z_dim,128, 4,1, 0,norm_type),
+            #TBlock(self.z_dim,128, 4,1, 0,norm_type),
+            TBlock(self.z_dim,32, 4,1, 0,norm_type),
             # * Layer 2: 4x4
-            TBlock(128,64,4,2,1,norm_type),
+            #TBlock(128,64,4,2,1,norm_type),
+            TBlock(32,16,4,2,1,norm_type),
             # * Layer 3: 8x8
-            TBlock(64,32,4,2,1,norm_type),
+            #TBlock(64,32,4,2,1,norm_type),
+            TBlock(16,8,4,2,1,norm_type),
             # * Layer 4: 16x16
-            nn.ConvTranspose2d(32, self.out_ch, kernel_size=4, stride=2, padding=3, bias=False),
+            #nn.ConvTranspose2d(32, self.out_ch, kernel_size=4, stride=2, padding=3, bias=False),
+            nn.ConvTranspose2d(8, self.out_ch, kernel_size=4, stride=2, padding=3, bias=False),
             # * 28x28
         )
 

@@ -48,6 +48,8 @@ class WGAN_GP():
         else:
             self.generator.apply(init_weight)
             self.discrim.apply(init_weight)
+            #self.generator=torch.compile(self.generator)
+            #self.discrim=torch.compile(self.discrim)
     def set_optimizers(self):
         self.generator = self.generator.to(self.cfg.device)
         self.discrim = self.discrim.to(self.cfg.device)
@@ -56,13 +58,13 @@ class WGAN_GP():
         self.optD = Adam(self.discrim.parameters(), lr=self.cfg.lr.d)
 
     def generator_step(self, data):
-        self.generator.train()
-        self.discrim.eval()
+        # self.generator.train()
+        # self.discrim.eval()
 
         self.optG.zero_grad()
 
         noise = random_sample(self.cfg.batch_size, self.cfg.z_dim, self.cfg.device)
-
+        
         fake_images = self.generator(noise)
         fake_logits = self.discrim(fake_images)
 
@@ -74,14 +76,15 @@ class WGAN_GP():
         self.metrics["G-loss"] += [loss.item()]
 
     def discriminator_step(self, data):
-        self.generator.eval()
-        self.discrim.train()
+        # self.generator.eval()
+        # self.discrim.train()
 
         self.optD.zero_grad()
 
         real_images = data[0].float().to(self.cfg.device)
 
         noise = random_sample(self.cfg.batch_size, self.cfg.z_dim, self.cfg.device)
+
         fake_images = self.generator(noise)
         
         real_logits = self.discrim(real_images)

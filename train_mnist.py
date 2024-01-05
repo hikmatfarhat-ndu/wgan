@@ -30,9 +30,10 @@ with open(cfg_path, "r") as f:
 cfg = DefaultMunch.fromDict(cfg)
 
 set_seed(cfg.seed)
-
 transforms = vt.Compose([vt.ToTensor(),vt.Normalize(0.5, 0.5),
     vt.Resize((cfg.imsize, cfg.imsize),antialias=True)])
+# transforms = vt.Compose([vt.ToTensor(),
+#     vt.Resize((cfg.imsize, cfg.imsize),antialias=True)])
 
 dataset =MNIST(root=cfg.data_dir, transform=transforms,download=True)
     
