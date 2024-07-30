@@ -29,12 +29,15 @@ norm_type:
 final_activation: 
   g: "tanh"
 # if True use fabric to with bf16 precision. Typically 20% faster
-use_fabric: False
+use_fabric: True
+# it seems bf16-mixed is better than bf16-true or they are the same?
+precision: "bf16-mixed"
+#precision: "bf16-true"
 # if True resume training from the latest checkpoint
 resume: False
-epochs: 500
+epochs: 50 #500
 # save generated images every save_img_freq epochs
-save_image_freq: 50
+save_image_freq: 10 #50
 # save model every save_model_freq epochs
 save_model_freq: 100
 # saved weights directory

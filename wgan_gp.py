@@ -1,9 +1,9 @@
-from comet_ml.integration.pytorch import log_model
+#from comet_ml.integration.pytorch import log_model
 import torch
 import torch.nn as nn
 from torch.optim import Adam
 from torch import autograd
-from tqdm import tqdm
+
 from collections import defaultdict
 import os
 from PIL import Image
@@ -13,6 +13,12 @@ from utils import init_weight,random_sample,norm
 from torchvision.utils import make_grid
 from torchmetrics.image.fid import FrechetInceptionDistance
 from lightning.fabric import Fabric
+
+try:
+    get_ipython()
+    from tqdm.notebook import tqdm
+except:
+    from tqdm import tqdm
 class WGAN_GP():
     """
     WGAN_GP Wasserstein GAN. Uses gradient penalty instead of gradient clipping to enforce 1-Lipschitz continuity. 

@@ -15,7 +15,7 @@ import random
 import numpy as np
 from wgan_gp import WGAN_GP
 
-torch.set_float32_matmul_precision('medium')
+#torch.set_float32_matmul_precision('medium')
 def set_seed(seed):
         torch.backends.cudnn.deterministic = True
         random.seed(seed)
@@ -54,7 +54,7 @@ loop = trange(start_epoch,start_epoch+cfg.epochs, desc="Epoch: ", ncols=75)
 
 experiment = comet_ml.Experiment(project_name=cfg.comet_project, log_graph=True,workspace=cfg.comet_workspace)
                 #                         auto_metric_logging=False, #auto_output_logging=False)
-#experiment.set_name(cfg.experiment_name)
+experiment.set_name(cfg.precision if cfg.use_fabric else "full" )
 experiment.log_parameters(cfg)
 experiment.log_parameter("starting epoch",start_epoch)
 ## log the model graph
