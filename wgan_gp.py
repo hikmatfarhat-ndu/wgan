@@ -108,9 +108,11 @@ class WGAN_GP():
         real_logits = self.discrim(real_images)
         fake_logits = self.discrim(fake_images)
 
-        gradient_penalty = self.cfg.w_gp * self._compute_gp(
-            real_images, fake_images
-        )
+        # gradient_penalty = self.cfg.w_gp * self._compute_gp(
+        #     real_images, fake_images
+        # )
+        gradient_penalty=self.cfg.w_gp*self.fabric.run(self._compute_gp,
+                                                       real_images,fake_images)
 
         loss_c = fake_logits.mean() - real_logits.mean()
         d_loss = loss_c + gradient_penalty
@@ -138,7 +140,7 @@ class WGAN_GP():
                 self.generator_step(data)
         
         return np.mean(self.metrics["D-loss"]),np.mean(self.metrics["G-loss"])
-
+    
     def _compute_gp(self, real_data, fake_data):
         batch_size = real_data.size(0)
         eps = torch.rand(batch_size, 1, 1, 1).to(real_data.device)
