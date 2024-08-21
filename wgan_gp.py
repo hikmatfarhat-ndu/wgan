@@ -1,4 +1,5 @@
 #from comet_ml.integration.pytorch import log_model
+import contextlib
 import torch
 import torch.nn as nn
 from torch.optim import Adam
@@ -87,10 +88,15 @@ class WGAN_GP():
     def generator_step(self, data):
 
         noise = random_sample(self.cfg.batch_size, self.cfg.zdim, self.cfg.device)
-        fake_images = self.generator(noise)
-        fake_logits = self.discrim(fake_images)
-        g_loss = -fake_logits.mean().view(-1)
-        self.optG.zero_grad()
+        if self.cfg.autocast:
+            cm=torch.autocast(device_type=self.cfg.device,dtype=torch.float16)
+        else:
+            cm=contextlib.nullcontext()
+        with cm:
+            fake_images = self.generator(noise)
+            fake_logits = self.discrim(fake_images)
+            g_loss = -fake_logits.mean().view(-1)
+            self.optG.zero_grad()
         if self.cfg.use_fabric:
             self.fabric.backward(g_loss)
         else:
@@ -103,19 +109,23 @@ class WGAN_GP():
         
         real_images = data[0].float().to(self.cfg.device)
         noise = random_sample(self.cfg.batch_size, self.cfg.zdim, self.cfg.device)
-        fake_images = self.generator(noise)
+        if self.cfg.autocast:
+            cm=torch.autocast(device_type=self.cfg.device,dtype=torch.float16)
+        else:
+            cm=contextlib.nullcontext()
+        with cm:
+            fake_images = self.generator(noise)
         
-        real_logits = self.discrim(real_images)
-        fake_logits = self.discrim(fake_images)
+            real_logits = self.discrim(real_images)
+            fake_logits = self.discrim(fake_images)
 
-        # gradient_penalty = self.cfg.w_gp * self._compute_gp(
-        #     real_images, fake_images
-        # )
-        gradient_penalty=self.cfg.w_gp*self.fabric.run(self._compute_gp,
-                                                       real_images,fake_images)
+            gradient_penalty = self.cfg.w_gp * self._compute_gp(
+                real_images, fake_images
+            )
+       
 
-        loss_c = fake_logits.mean() - real_logits.mean()
-        d_loss = loss_c + gradient_penalty
+            loss_c = fake_logits.mean() - real_logits.mean()
+            d_loss = loss_c + gradient_penalty
 
         self.optD.zero_grad()
         if self.cfg.use_fabric:

@@ -29,7 +29,8 @@ norm_type:
 final_activation: 
   g: "tanh"
 # if True use fabric to with bf16 precision. Typically 20% faster
-use_fabric: True
+use_fabric: False
+autocast: True
 # it seems bf16-mixed is better than bf16-true or they are the same?
 precision: "bf16-mixed"
 #precision: "bf16-true"
